@@ -23,7 +23,7 @@ struct ContentView: View {
                     .padding(.bottom, 76)
                 }
             }
-            .navigationTitle("管理費チェッカー")
+            .navigationTitle("マンション管理費チェッカー")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .safeAreaInset(edge: .bottom) {

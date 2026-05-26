@@ -33,8 +33,8 @@ targets:
     info:
       path: KanriFair/Info.plist
       properties:
-        CFBundleName: 管理費チェッカー
-        CFBundleDisplayName: 管理費チェッカー
+        CFBundleName: マンション管理費チェッカー
+        CFBundleDisplayName: マンション管理費チェッカー
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         LSRequiresIPhoneOS: true
