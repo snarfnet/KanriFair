@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"openssl pkcs12 -in C:/Users/Windows/asc-automation/tokyonasu-signing/tokyonasu_distribution.p12 -passin \\\"pass:5jbe3GZ88jZFLPCTV1TVhgoVHKYrcC3w\\\" -nodes 2>&1 | openssl pkcs12 -export -pass...",
-  "error": "Exit code 1",
-  "timestamp": "2026-05-26T00:34:07.066Z",
-  "retry_count": 1
-}
