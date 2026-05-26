@@ -1,14 +1,23 @@
 import SwiftUI
 
 enum UnitCountRange: String, CaseIterable, Identifiable {
-    case small = "20戸以下"
-    case medium = "21〜50戸"
-    case large = "51〜100戸"
-    case xlarge = "101〜200戸"
-    case xxlarge = "201戸以上"
+    case small
+    case medium
+    case large
+    case xlarge
+    case xxlarge
 
     var id: String { rawValue }
-    var label: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .small: return "20戸以下"
+        case .medium: return "21〜50戸"
+        case .large: return "51〜100戸"
+        case .xlarge: return "101〜200戸"
+        case .xxlarge: return "201戸以上"
+        }
+    }
 
     var averagePerSqm: Int {
         switch self {
@@ -22,13 +31,21 @@ enum UnitCountRange: String, CaseIterable, Identifiable {
 }
 
 enum FloorRange: String, CaseIterable, Identifiable {
-    case low = "5階以下"
-    case mid = "6〜10階"
-    case high = "11〜19階"
-    case tower = "20階以上（タワー）"
+    case low
+    case mid
+    case high
+    case tower
 
     var id: String { rawValue }
-    var label: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .low: return "5階以下"
+        case .mid: return "6〜10階"
+        case .high: return "11〜19階"
+        case .tower: return "20階以上"
+        }
+    }
 
     var adjustment: Double {
         switch self {
@@ -41,14 +58,23 @@ enum FloorRange: String, CaseIterable, Identifiable {
 }
 
 enum BuildingAgeRange: String, CaseIterable, Identifiable {
-    case new = "5年以内"
-    case young = "6〜15年"
-    case mid = "16〜25年"
-    case old = "26〜35年"
-    case veryOld = "36年以上"
+    case new
+    case young
+    case mid
+    case old
+    case veryOld
 
     var id: String { rawValue }
-    var label: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .new: return "5年以内"
+        case .young: return "6〜15年"
+        case .mid: return "16〜25年"
+        case .old: return "26〜35年"
+        case .veryOld: return "36年以上"
+        }
+    }
 
     var adjustment: Double {
         switch self {
@@ -61,69 +87,90 @@ enum BuildingAgeRange: String, CaseIterable, Identifiable {
     }
 }
 
-class KanriFairViewModel: ObservableObject {
+final class KanriFairViewModel: ObservableObject {
     @Published var unitCountRange: UnitCountRange = .medium
     @Published var floorRange: FloorRange = .mid
     @Published var ageRange: BuildingAgeRange = .mid
-    @Published var areaText: String = "70"
-    @Published var currentFeeText: String = ""
+    @Published var areaText = "70"
+    @Published var currentFeeText = ""
     @Published var showResult = false
 
-    var averagePerSqm: Int = 0
-    var estimatedFee: Int = 0
-    var currentFee: Int = 0
-    var differenceText: String = ""
-    var differenceColor: Color = .primary
-    var verdict: String = ""
-    var verdictColor: Color = .primary
-    var advice: String = ""
+    var averagePerSqm = 0
+    var estimatedFee = 0
+    var currentFee = 0
+    var difference = 0
+    var differenceRate = 0.0
+    var verdict = "未診断"
+    var advice = "専有面積と現在の管理費を入力すると、目安と比較できます。"
+
+    var differenceText: String {
+        let sign = difference > 0 ? "+" : ""
+        return "\(sign)\(formatCurrency(difference))"
+    }
+
+    var rateText: String {
+        String(format: "%+.0f%%", differenceRate)
+    }
+
+    var verdictColor: Color {
+        switch differenceRate {
+        case 30...: return .red
+        case 15..<30: return .orange
+        case -15...15: return .green
+        case -30..<(-15): return .blue
+        default: return .purple
+        }
+    }
+
+    var statusLabel: String {
+        switch differenceRate {
+        case 30...: return "かなり高め"
+        case 15..<30: return "やや高め"
+        case -15...15: return "適正圏内"
+        case -30..<(-15): return "やや安め"
+        default: return "安すぎ注意"
+        }
+    }
+
+    var comparisonProgress: Double {
+        guard estimatedFee > 0 else { return 0 }
+        return min(max(Double(currentFee) / Double(estimatedFee), 0), 1.8) / 1.8
+    }
 
     func calculate() {
-        guard let area = Double(areaText),
-              let fee = Int(currentFeeText) else { return }
+        guard let area = Double(areaText.replacingOccurrences(of: ",", with: "")),
+              let fee = Int(currentFeeText.replacingOccurrences(of: ",", with: "")),
+              area > 0 else { return }
 
-        let basePerSqm = Double(unitCountRange.averagePerSqm)
-        let adjusted = basePerSqm * floorRange.adjustment * ageRange.adjustment
-        averagePerSqm = Int(adjusted)
-        estimatedFee = Int(adjusted * area)
+        let adjusted = Double(unitCountRange.averagePerSqm) * floorRange.adjustment * ageRange.adjustment
+        averagePerSqm = Int(adjusted.rounded())
+        estimatedFee = Int((adjusted * area).rounded())
         currentFee = fee
+        difference = fee - estimatedFee
+        differenceRate = Double(difference) / Double(estimatedFee) * 100
+        verdict = statusLabel
 
-        let diff = fee - estimatedFee
-        let diffPercent = Double(diff) / Double(estimatedFee) * 100
-
-        if diff > 0 {
-            differenceText = "+¥\(diff)（+\(Int(diffPercent))%）"
-        } else {
-            differenceText = "¥\(diff)（\(Int(diffPercent))%）"
-        }
-
-        if diffPercent > 30 {
-            differenceColor = .red
-            verdict = "かなり割高"
-            verdictColor = .red
-            advice = "管理委託費の見直し、管理会社の変更を検討する価値があります。理事会で管理費の内訳明細を確認しましょう。"
-        } else if diffPercent > 15 {
-            differenceColor = .orange
-            verdict = "やや割高"
-            verdictColor = .orange
-            advice = "管理内容に見合っているか確認を。コンシェルジュや豪華な共用施設があれば妥当な場合もあります。"
-        } else if diffPercent > -15 {
-            differenceColor = .green
-            verdict = "適正範囲"
-            verdictColor = .green
-            advice = "相場通りの管理費です。管理内容に不満がなければ問題ありません。"
-        } else if diffPercent > -30 {
-            differenceColor = .blue
-            verdict = "やや割安"
-            verdictColor = .blue
-            advice = "安い分、管理が行き届いているか確認を。修繕積立金が不足していないかも要チェック。"
-        } else {
-            differenceColor = .purple
-            verdict = "かなり割安（要注意）"
-            verdictColor = .purple
-            advice = "管理費が安すぎると、将来の大規模修繕時に一時金徴収のリスクがあります。長期修繕計画を確認してください。"
+        switch differenceRate {
+        case 30...:
+            advice = "管理委託費、清掃費、設備保守費の内訳を確認しましょう。総会資料で支出の根拠を見直す価値があります。"
+        case 15..<30:
+            advice = "相場より少し高めです。共用施設や管理品質に見合っているか、同規模物件と比べて確認しましょう。"
+        case -15...15:
+            advice = "相場に近い水準です。金額だけでなく、修繕積立金や管理内容も合わせて確認すると判断しやすくなります。"
+        case -30..<(-15):
+            advice = "安めの水準です。管理が簡素すぎないか、将来の修繕費へしわ寄せが出ないかを確認しましょう。"
+        default:
+            advice = "かなり安めです。長期修繕計画、管理会社の業務範囲、未収金の有無を必ず確認してください。"
         }
 
         showResult = true
+    }
+
+    func formatCurrency(_ value: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "JPY"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "¥\(value)"
     }
 }

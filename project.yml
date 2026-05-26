@@ -49,7 +49,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
-        NSUserTrackingUsageDescription: "パーソナライズ広告のためにデータを使用します。"
+        NSUserTrackingUsageDescription: "広告配信のためにデータを使用します。"
         GADApplicationIdentifier: ca-app-pub-9404799280370656~KANRIFAIR01
         SKAdNetworkItems:
           - SKAdNetworkIdentifier: cstr6suwn9.skadnetwork
